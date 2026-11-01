@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { readDB, writeDB } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { parseDeadline, susunDaftarTugas } from "../lib/deadline.js";
 
 const router = Router();
 
@@ -10,28 +11,28 @@ router.use(requireAuth);
 /**
  * GET /api/tasks
  * Daftar seluruh tugas milik pengguna yang sedang login, lintas semua mata
- * kuliah. Setiap tugas menyertakan `mata_kuliah` (nama mata kuliahnya).
+ * kuliah (F04). Setiap tugas menyertakan `mata_kuliah` (nama mata kuliahnya).
  *
- * Urutan saat ini: `created_at` terbaru di atas.
+ * Fitur Reminder Tugas Mendekati Deadline:
+ *  - Setiap tugas diberi `kategori` ("mendekati_deadline" | "terlewat" | "normal")
+ *    dan `sisa_waktu_ms` (negatif jika sudah lewat). Kategori dihitung saat
+ *    request, bukan disimpan, karena nilainya berubah seiring waktu.
+ *  - Urutan: mendekati deadline, lalu terlewat, lalu normal (created_at terbaru).
+ *  - `server_time` dikirim agar frontend memakai acuan waktu yang sama.
  *
- * Response : 200 { tasks }
- *
- * CATATAN UNTUK PESERTA STUDI KASUS:
- * Ini adalah titik yang relevan untuk fitur "Reminder Tugas Mendekati Deadline".
- * Silakan tambahkan logic untuk menandai/mengurutkan ulang tugas yang
- * sisa waktunya < 24 jam di sini (atau di tempat lain sesuai rancangan Anda).
+ * Response : 200 { server_time, tasks }
  */
 router.get("/", (req, res) => {
   const db = readDB();
+  const now = new Date();
   const tasks = db.tasks
     .filter((t) => t.user_id === req.user.id)
     .map((t) => {
       const course = db.courses.find((c) => c.id === t.mata_kuliah_id);
       return { ...t, mata_kuliah: course ? course.name : null };
-    })
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    });
 
-  res.json({ tasks });
+  res.json({ server_time: now.toISOString(), tasks: susunDaftarTugas(tasks, now) });
 });
 
 /**
@@ -61,6 +62,10 @@ router.post("/", (req, res) => {
   const { mata_kuliah_id, judul, deskripsi, deadline } = req.body;
   if (!mata_kuliah_id || !judul || !deadline) {
     return res.status(400).json({ error: "mata_kuliah_id, judul, dan deadline wajib diisi." });
+  }
+
+  if (!parseDeadline(deadline)) {
+    return res.status(400).json({ error: "Format deadline tidak valid." });
   }
 
   const db = readDB();
@@ -103,7 +108,12 @@ router.put("/:id", (req, res) => {
   const { judul, deskripsi, deadline, status } = req.body;
   if (judul !== undefined) task.judul = judul;
   if (deskripsi !== undefined) task.deskripsi = deskripsi;
-  if (deadline !== undefined) task.deadline = deadline;
+  if (deadline !== undefined) {
+    if (!parseDeadline(deadline)) {
+      return res.status(400).json({ error: "Format deadline tidak valid." });
+    }
+    task.deadline = deadline;
+  }
   if (status !== undefined) {
     if (!["belum", "selesai"].includes(status)) {
       return res.status(400).json({ error: "Status hanya boleh 'belum' atau 'selesai'." });

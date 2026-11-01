@@ -166,3 +166,27 @@ Keduanya hanya penunjuk titik yang relevan. Anda tidak harus menaruh logika di s
 - Anda boleh memigrasikan penyimpanan dari file JSON ke database sungguhan (SQLite, PostgreSQL, dan sebagainya), tetapi itu tidak wajib.
 - **Git history.** Salin starter kit ini ke repositori Anda sendiri dan commit kondisi awalnya lebih dulu, lalu kerjakan fitur di branch terpisah dengan commit message yang deskriptif.
 - **Deployment.** Proxy Vite hanya berlaku saat `npm run dev`, jadi frontend hasil build perlu diarahkan ke URL backend (misalnya lewat `baseURL` di `frontend/src/api.js`). Ganti juga `JWT_SECRET` dengan nilai acak dan atur `NODE_ENV=production`. Penyimpanan file di layanan gratis seperti Render atau Railway umumnya bersifat sementara, sehingga `db.json` bisa hilang saat redeploy.
+
+## Fitur Baru: Reminder Tugas Mendekati Deadline
+
+Dikerjakan oleh Gilang Nanda Saputra sebagai bonus implementasi studi kasus.
+
+| Kategori | Kondisi | Tampilan |
+| --- | --- | --- |
+| `mendekati_deadline` | Status `belum` dan sisa waktu 0 sampai kurang dari 24 jam | Paling atas, tepi merah, badge "Mendekati Deadline", sisa waktu |
+| `terlewat` | Status `belum` dan waktu sekarang sudah melewati deadline | Di bawah kategori mendekati, latar abu-abu, badge "Terlewat", lama keterlambatan |
+| `normal` | Sisa waktu 24 jam atau lebih, atau status `selesai` | Card seperti semula, urutan `created_at` terbaru |
+
+Keputusan teknis utama:
+
+- Skema data tidak diubah. Kategori dihitung saat request karena nilainya berubah seiring waktu, sehingga tidak disimpan di database.
+- Logika ada di `backend/lib/deadline.js` sebagai fungsi murni dengan parameter waktu, sehingga mudah diuji.
+- Deadline tanpa zona waktu (data lama) ditafsirkan memakai `APP_TZ_OFFSET` (bawaan `+07:00`). Deadline baru dikirim frontend dalam format ISO 8601 UTC. Dengan begitu hasil tetap benar walaupun server berjalan di zona UTC.
+- `GET /api/tasks` kini mengembalikan `{ server_time, tasks }` dan setiap tugas memiliki `kategori` serta `sisa_waktu_ms`.
+
+Menjalankan pengujian:
+
+```bash
+cd backend
+npm test
+```

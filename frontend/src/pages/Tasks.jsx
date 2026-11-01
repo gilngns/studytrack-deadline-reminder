@@ -24,7 +24,13 @@ export default function Tasks() {
 
   useEffect(() => {
     loadData();
+    // Kategori bergantung pada waktu, jadi daftar dimuat ulang tiap menit
+    // agar penanda tetap benar walaupun halaman dibiarkan terbuka.
+    const timer = setInterval(loadData, 60 * 1000);
+    return () => clearInterval(timer);
   }, []);
+
+  const jumlahMendekati = tasks.filter((t) => t.kategori === "mendekati_deadline").length;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -34,7 +40,9 @@ export default function Tasks() {
       return;
     }
     try {
-      await api.post("/tasks", { mata_kuliah_id: courseId, judul, deskripsi, deadline });
+      // Nilai datetime-local dikonversi ke ISO 8601 UTC agar tidak ambigu zona waktunya.
+      const deadlineIso = new Date(deadline).toISOString();
+      await api.post("/tasks", { mata_kuliah_id: courseId, judul, deskripsi, deadline: deadlineIso });
       setJudul("");
       setDeskripsi("");
       setDeadline("");
@@ -95,6 +103,12 @@ export default function Tasks() {
             <button type="submit">Tambah Tugas</button>
           </form>
         </div>
+
+        {jumlahMendekati > 0 && (
+          <div className="alert-deadline">
+            {jumlahMendekati} tugas akan mencapai deadline dalam 24 jam ke depan.
+          </div>
+        )}
 
         {tasks.length === 0 && <p>Belum ada tugas. Tambahkan tugas pertama Anda di atas.</p>}
 
