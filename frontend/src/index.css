@@ -139,3 +139,47 @@ h1, h2 {
   font-size: 0.9rem;
   margin-top: 10px;
 }
+
+/* Fitur Reminder Tugas Mendekati Deadline */
+.task-card.kategori-mendekati_deadline {
+  border-left: 5px solid #dc2626;
+  background: #fef2f2;
+}
+
+.task-card.kategori-terlewat {
+  border-left: 5px solid #6b7280;
+  background: #f3f4f6;
+}
+
+.penanda-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.badge.penanda.mendekati_deadline {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.badge.penanda.terlewat {
+  background: #374151;
+  color: #ffffff;
+}
+
+.sisa-waktu {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.alert-deadline {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
